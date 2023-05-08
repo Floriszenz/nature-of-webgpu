@@ -1,6 +1,8 @@
 {
     "recommendations": [
         "esbenp.prettier-vscode",
-        "svelte.svelte-vscode"
+        "svelte.svelte-vscode",
+        "ggsimm.wgsl-literal",
+        "polymeilex.wgsl"
     ]
 }

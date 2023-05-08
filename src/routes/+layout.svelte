@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-    <title>Nature of WebGPU</title>
+    <title>The Nature of WebGPU</title>
 </svelte:head>
 
 <slot />

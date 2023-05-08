@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { DrawContext } from "$lib/framework/draw-context.js";
     import { onMount } from "svelte";
 
     export let data;
@@ -11,6 +12,13 @@
     onMount(async () => {
         try {
             simulation = await import(`../../lib/simulations/${data.simulationId}.ts`);
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = await DrawContext.initialize(canvas);
+
+            ctx.setupSimulation();
         } catch (error) {
             // TODO: Show 404 page
             console.log(error);
@@ -29,6 +37,10 @@
 </main>
 
 <style>
+    :root {
+        --gap: 32px;
+    }
+
     main {
         display: grid;
         place-items: center;
@@ -37,7 +49,9 @@
     }
 
     canvas {
-        block-size: 100%;
-        inline-size: 100%;
+        block-size: calc(100% - 2 * var(--gap));
+        aspect-ratio: 1;
+        border-radius: 20px;
+        box-shadow: 0 0 15px hsla(0, 0%, 50%, 0.5);
     }
 </style>
