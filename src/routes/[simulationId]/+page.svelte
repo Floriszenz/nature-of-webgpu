@@ -1,5 +1,6 @@
 <script lang="ts">
     import { DrawContext } from "$lib/framework/draw-context.js";
+    import type { SimulationDescription } from "$lib/types.js";
     import { onMount } from "svelte";
 
     export let data;
@@ -7,33 +8,64 @@
     let width: number;
     let height: number;
 
-    let simulation: { title: string };
+    let ctx: DrawContext;
+    let simulation: Promise<SimulationDescription> = new Promise(() => {});
+    let isRunning: boolean = false;
 
     onMount(async () => {
         try {
-            simulation = await import(`../../lib/simulations/${data.simulationId}.ts`);
+            simulation = import(`../../lib/simulations/${data.simulationId}.ts`);
 
             canvas.width = width;
             canvas.height = height;
 
-            const ctx = await DrawContext.initialize(canvas);
+            ctx = await DrawContext.initialize(canvas);
 
-            ctx.setupSimulation();
+            ctx.setupSimulation((await simulation).config);
+            ctx.startSimulation();
+            isRunning = true;
         } catch (error) {
             // TODO: Show 404 page
             console.log(error);
         }
     });
+
+    function onPlayPauseClick() {
+        if (isRunning) {
+            ctx.stopSimulation();
+            isRunning = false;
+        } else {
+            ctx.startSimulation();
+            isRunning = true;
+        }
+    }
 </script>
 
 <svelte:head>
-    {#if simulation}
+    {#await simulation then simulation}
         <title>{simulation.title}</title>
-    {/if}
+    {/await}
 </svelte:head>
 
 <main bind:clientHeight={height} bind:clientWidth={width}>
+    <aside>
+        {#await simulation}
+            <p>Loading...</p>
+        {:then simulation}
+            <h1>{simulation?.title}</h1>
+            <p>{simulation?.description}</p>
+        {/await}
+    </aside>
     <canvas bind:this={canvas} />
+    <aside>
+        <button on:click={onPlayPauseClick}>
+            {#if isRunning}
+                Pause simulation
+            {:else}
+                Resume simulation
+            {/if}
+        </button>
+    </aside>
 </main>
 
 <style>
@@ -43,15 +75,23 @@
 
     main {
         display: grid;
-        place-items: center;
-        block-size: 100vb;
-        inline-size: 100vi;
+        grid-template-columns: 1fr 2fr 1fr;
+        gap: var(--gap);
+        place-items: start center;
+        padding: var(--gap);
     }
 
     canvas {
-        block-size: calc(100% - 2 * var(--gap));
+        block-size: calc(100vmin - 2 * var(--gap));
         aspect-ratio: 1;
         border-radius: 20px;
         box-shadow: 0 0 15px hsla(0, 0%, 50%, 0.5);
+    }
+
+    @media screen and (orientation: portrait) {
+        main {
+            grid-template-columns: auto;
+            grid-template-rows: auto 1fr auto;
+        }
     }
 </style>
