@@ -35,15 +35,15 @@ export class ParticleSimulation<P extends string> {
     }
 
     setupSimulation(device: GPUDevice, shader: string, parametersOrder: P[]) {
-        this.initComputePipeline(device, shader);
+        this.#initComputePipeline(device, shader);
 
         this.#parametersOrder = parametersOrder;
 
-        this.initParametersBuffer(device);
+        this.#initParametersBuffer(device);
         this.updateParametersBuffer(device);
         this.#target.initSimulationParametersBuffer(this.#parametersBuffer!);
 
-        this.initParticleBuffer(device);
+        this.#initParticleBuffer(device);
         this.#boidSwarm.initInstanceBuffer(this.#particleBuffer!, this.#particleCount);
     }
 
@@ -55,7 +55,7 @@ export class ParticleSimulation<P extends string> {
         this.#boidSwarm.initBuffer(device);
     }
 
-    initParametersBuffer(device: GPUDevice): GPUBuffer {
+    #initParametersBuffer(device: GPUDevice): GPUBuffer {
         const parametersCount = Object.values(this.#parameters)
             .map((p) => (p instanceof Array ? p.length : 1))
             .reduce((sum, val) => (sum += val), 0);
@@ -81,7 +81,7 @@ export class ParticleSimulation<P extends string> {
         device.queue.writeBuffer(this.#parametersBuffer, 0, new Float32Array(parameterValues));
     }
 
-    initParticleBuffer(device: GPUDevice): GPUBuffer {
+    #initParticleBuffer(device: GPUDevice): GPUBuffer {
         if (!this.#computePipeline)
             throw new Error("Cannot use compute pipeline without initializing it.");
         if (!this.#parametersBuffer)
@@ -126,7 +126,7 @@ export class ParticleSimulation<P extends string> {
         return this.#particleBuffer;
     }
 
-    initComputePipeline(device: GPUDevice, shader: string) {
+    #initComputePipeline(device: GPUDevice, shader: string) {
         const shaderModule = device.createShaderModule({ code: shader });
 
         this.#computePipeline = device.createComputePipeline({

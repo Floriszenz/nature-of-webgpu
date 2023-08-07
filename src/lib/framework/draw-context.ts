@@ -48,14 +48,14 @@ export class DrawContext {
         });
     }
 
-    update(commandEncoder: GPUCommandEncoder) {
+    #update(commandEncoder: GPUCommandEncoder) {
         const passEncoder = commandEncoder.beginComputePass();
 
         this.#simulation!.update(passEncoder);
         passEncoder.end();
     }
 
-    show(commandEncoder: GPUCommandEncoder) {
+    #show(commandEncoder: GPUCommandEncoder) {
         const passEncoder = commandEncoder.beginRenderPass({
             colorAttachments: [
                 {
@@ -71,7 +71,7 @@ export class DrawContext {
         passEncoder.end();
     }
 
-    run() {
+    #run() {
         if (!this.#simulation) throw new Error("Cannot run without a simulation");
 
         if (this.#shouldUpdateParams) {
@@ -81,15 +81,15 @@ export class DrawContext {
 
         const commandEncoder = this.#device.createCommandEncoder();
 
-        this.update(commandEncoder);
-        this.show(commandEncoder);
+        this.#update(commandEncoder);
+        this.#show(commandEncoder);
         this.#device.queue.submit([commandEncoder.finish()]);
 
-        this.#animationHandle = requestAnimationFrame(() => this.run());
+        this.#animationHandle = requestAnimationFrame(() => this.#run());
     }
 
     startSimulation() {
-        this.#animationHandle = requestAnimationFrame(() => this.run());
+        this.#animationHandle = requestAnimationFrame(() => this.#run());
     }
 
     stopSimulation() {
