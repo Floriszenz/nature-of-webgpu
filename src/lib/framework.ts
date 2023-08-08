@@ -14,3 +14,27 @@ export async function initializeContext(canvas: HTMLCanvasElement) {
 
     return [device, ctx, format] as const;
 }
+
+export function createBufferWithData({
+    device,
+    data,
+    usage,
+    label,
+}: {
+    device: GPUDevice;
+    data: Float32Array;
+    usage: GPUBufferUsageFlags;
+    label?: string;
+}): GPUBuffer {
+    const buffer = device.createBuffer({
+        label,
+        size: data.byteLength,
+        usage,
+        mappedAtCreation: true,
+    });
+
+    new Float32Array(buffer.getMappedRange()).set(data);
+    buffer.unmap();
+
+    return buffer;
+}

@@ -25,20 +25,3 @@ export function circle(radius: number, edgePointCount: number): Float32Array {
 export function triangle(base: number, height: number): Float32Array {
     return new Float32Array([-(base / 2), -(height / 2), base / 2, -(height / 2), 0.0, height / 2]);
 }
-
-export function createBufferWithData(
-    device: GPUDevice,
-    data: Float32Array,
-    usage: GPUBufferUsageFlags
-): GPUBuffer {
-    const buffer = device.createBuffer({
-        size: data.byteLength,
-        usage,
-        mappedAtCreation: true,
-    });
-
-    new Float32Array(buffer.getMappedRange()).set(data);
-    buffer.unmap();
-
-    return buffer;
-}

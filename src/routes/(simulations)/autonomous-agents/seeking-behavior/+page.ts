@@ -1,4 +1,5 @@
-import * as utils from "$lib/framework/utils";
+import * as shapes from "$lib/framework/shapes";
+import { createBufferWithData } from "$lib/framework";
 
 const COMPUTE_SHADER = /*wgsl*/ `
     struct Particle {
@@ -154,19 +155,12 @@ export function load() {
                 layout: device.createPipelineLayout({ bindGroupLayouts: [simBGLayout] }),
             });
 
-            const simParamsBuffer = device.createBuffer({
+            const simParamsBuffer = createBufferWithData({
+                device,
                 label: "Simulation Parameters Buffer",
-                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                data: new Float32Array([...TARGET_POSITION, MAX_SPEED, MAX_FORCE]),
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-                mappedAtCreation: true,
             });
-
-            new Float32Array(simParamsBuffer.getMappedRange()).set([
-                ...TARGET_POSITION,
-                MAX_SPEED,
-                MAX_FORCE,
-            ]);
-            simParamsBuffer.unmap();
 
             const particleData = new Float32Array(4 * PARTICLE_COUNT);
 
@@ -179,15 +173,12 @@ export function load() {
                 particleData[4 * idx + 3] = 0;
             }
 
-            const particleBuffer = device.createBuffer({
+            const particleBuffer = createBufferWithData({
+                device,
                 label: "Particle Buffer",
-                size: particleData.byteLength,
+                data: particleData,
                 usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-                mappedAtCreation: true,
             });
-
-            new Float32Array(particleBuffer.getMappedRange()).set(particleData);
-            particleBuffer.unmap();
 
             const simBG = device.createBindGroup({
                 layout: simBGLayout,
@@ -198,17 +189,14 @@ export function load() {
             });
 
             // Rendering - Target
-            const targetBufferData = utils.circle(TARGET_RADIUS, TARGET_RESOLUTION);
+            const targetBufferData = shapes.circle(TARGET_RADIUS, TARGET_RESOLUTION);
 
-            const targetBuffer = device.createBuffer({
+            const targetBuffer = createBufferWithData({
+                device,
                 label: "Target Vertex Buffer",
-                size: targetBufferData.byteLength,
+                data: targetBufferData,
                 usage: GPUBufferUsage.VERTEX,
-                mappedAtCreation: true,
             });
-
-            new Float32Array(targetBuffer.getMappedRange()).set(targetBufferData);
-            targetBuffer.unmap();
 
             const targetShaderModule = device.createShaderModule({ code: TARGET_RENDER_SHADER });
             const targetPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] });
@@ -243,17 +231,14 @@ export function load() {
             });
 
             // Rendering - Boid
-            const boidBufferData = utils.triangle(BOID_WIDTH, BOID_HEIGHT);
+            const boidBufferData = shapes.triangle(BOID_WIDTH, BOID_HEIGHT);
 
-            const boidBuffer = device.createBuffer({
+            const boidBuffer = createBufferWithData({
+                device,
                 label: "Boid Vertex Buffer",
-                size: boidBufferData.byteLength,
+                data: boidBufferData,
                 usage: GPUBufferUsage.VERTEX,
-                mappedAtCreation: true,
             });
-
-            new Float32Array(boidBuffer.getMappedRange()).set(boidBufferData);
-            boidBuffer.unmap();
 
             const boidShaderModule = device.createShaderModule({ code: BOID_RENDER_SHADER });
             const boidPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] });
