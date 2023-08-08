@@ -1,28 +1,66 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { initializeContext } from "$lib/framework";
+    import { onMount } from "svelte";
 
     let height: number;
     let width: number;
     let canvas: HTMLCanvasElement;
     let isSimulationRunning = false;
+    let animationHandle: number;
+
+    $: canvasRect = canvas?.getBoundingClientRect();
+
+    let device: GPUDevice;
+    let ctx: GPUCanvasContext;
+    let format: GPUTextureFormat;
+    let setupData: App.SetupReturnType;
+    let mousePosition: { x: number; y: number } = { x: 0, y: 0 };
+
+    onMount(async () => {
+        canvas.width = Math.min(width, height);
+        canvas.height = Math.min(width, height);
+
+        [device, ctx, format] = await initializeContext(canvas);
+
+        setupData = $page.data.setup(device, format);
+
+        runSimulation();
+        isSimulationRunning = true;
+    });
+
+    function runSimulation() {
+        $page.data.update(device, ctx, setupData, mousePosition);
+
+        animationHandle = requestAnimationFrame(() => runSimulation());
+    }
+
+    function handleMouseMove(event: MouseEvent) {
+        mousePosition.x = 2 * ((event.x - canvasRect.left) / width - 0.5);
+        mousePosition.y = -2 * ((event.y - canvasRect.top) / height - 0.5);
+    }
 
     function onPlayPauseClick() {
         if (isSimulationRunning) {
-            // ctx.stopSimulation();
+            cancelAnimationFrame(animationHandle);
             isSimulationRunning = false;
         } else {
-            // ctx.startSimulation();
+            runSimulation();
             isSimulationRunning = true;
         }
     }
 </script>
 
-<main bind:clientHeight={height} bind:clientWidth={width}>
+<main>
     <aside>
         <h1>{$page.data.title}</h1>
         <p>{$page.data.description}</p>
     </aside>
-    <canvas bind:this={canvas} />
+    <canvas
+        bind:this={canvas}
+        bind:clientHeight={height}
+        bind:clientWidth={width}
+        on:mousemove={handleMouseMove} />
     <aside>
         <button on:click={onPlayPauseClick}>
             {#if isSimulationRunning}
@@ -33,6 +71,8 @@
         </button>
     </aside>
 </main>
+
+<slot />
 
 <style>
     :root {
