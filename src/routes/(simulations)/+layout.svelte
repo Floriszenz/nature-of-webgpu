@@ -36,8 +36,10 @@
     }
 
     function handleMouseMove(event: MouseEvent) {
-        mousePosition.x = 2 * ((event.x - canvasRect.left) / width - 0.5);
-        mousePosition.y = -2 * ((event.y - canvasRect.top) / height - 0.5);
+        if (isSimulationRunning) {
+            mousePosition.x = 2 * ((event.x - canvasRect.left) / width - 0.5);
+            mousePosition.y = -2 * ((event.y - canvasRect.top) / height - 0.5);
+        }
     }
 
     function onPlayPauseClick() {
