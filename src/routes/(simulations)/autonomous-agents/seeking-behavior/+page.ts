@@ -135,6 +135,9 @@ type SetupReturnType = {
     renderPipelines: RenderPipelineDefinition[];
 };
 
+export const csr = true;
+export const ssr = false;
+
 export function load() {
     return {
         title: "Seeking Behavior",
@@ -329,12 +332,12 @@ export function load() {
             device: GPUDevice,
             ctx: GPUCanvasContext,
             setupData: SetupReturnType,
-            mousePosition: { x: number; y: number }
+            simParamsData: Float32Array
         ) {
             device.queue.writeBuffer(
                 setupData.renderPipelines[0].vertexBuffers[0].buffer,
                 0,
-                new Float32Array([mousePosition.x, mousePosition.y])
+                simParamsData
             );
 
             const commandEncoder = device.createCommandEncoder();

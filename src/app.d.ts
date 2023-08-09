@@ -44,7 +44,7 @@ declare global {
                 device: GPUDevice,
                 ctx: GPUCanvasContext,
                 setupData: SetupReturnType,
-                mousePosition: { x: number; y: number }
+                simParamsData: Float32Array
             ): void;
         }
         // interface Platform {}
