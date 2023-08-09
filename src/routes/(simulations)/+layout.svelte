@@ -3,7 +3,7 @@
 
     import { page } from "$app/stores";
     import { initializeContext } from "$lib/framework";
-    import { simParams } from "$lib/stores";
+    import { mousePosition } from "$lib/stores";
 
     let height: number;
     let width: number;
@@ -17,16 +17,6 @@
     let ctx: GPUCanvasContext;
     let format: GPUTextureFormat;
     let setupData: App.SetupReturnType;
-    let mousePosition: { x: number; y: number } = { x: 0, y: 0 };
-
-    let simParamsData = new Float32Array(4);
-
-    $: {
-        simParamsData[0] = mousePosition.x;
-        simParamsData[1] = mousePosition.y;
-        simParamsData[2] = $simParams.maxSpeed;
-        simParamsData[3] = $simParams.maxForce;
-    }
 
     onMount(async () => {
         canvas.width = Math.min(width, height);
@@ -41,15 +31,15 @@
     });
 
     function runSimulation() {
-        $page.data.update(device, ctx, setupData, simParamsData);
+        $page.data.update(device, ctx, setupData);
 
         animationHandle = requestAnimationFrame(() => runSimulation());
     }
 
     function handleMouseMove(event: MouseEvent) {
         if (isSimulationRunning) {
-            mousePosition.x = 2 * ((event.x - canvasRect.left) / width - 0.5);
-            mousePosition.y = -2 * ((event.y - canvasRect.top) / height - 0.5);
+            $mousePosition.x = 2 * ((event.x - canvasRect.left) / width - 0.5);
+            $mousePosition.y = -2 * ((event.y - canvasRect.top) / height - 0.5);
         }
     }
 
