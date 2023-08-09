@@ -1,7 +1,9 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+
     import { page } from "$app/stores";
     import { initializeContext } from "$lib/framework";
-    import { onMount } from "svelte";
+    import { simParams } from "$lib/stores";
 
     let height: number;
     let width: number;
@@ -17,6 +19,15 @@
     let setupData: App.SetupReturnType;
     let mousePosition: { x: number; y: number } = { x: 0, y: 0 };
 
+    let simParamsData = new Float32Array(4);
+
+    $: {
+        simParamsData[0] = mousePosition.x;
+        simParamsData[1] = mousePosition.y;
+        simParamsData[2] = $simParams.maxSpeed;
+        simParamsData[3] = $simParams.maxForce;
+    }
+
     onMount(async () => {
         canvas.width = Math.min(width, height);
         canvas.height = Math.min(width, height);
@@ -30,7 +41,7 @@
     });
 
     function runSimulation() {
-        $page.data.update(device, ctx, setupData, mousePosition);
+        $page.data.update(device, ctx, setupData, simParamsData);
 
         animationHandle = requestAnimationFrame(() => runSimulation());
     }
@@ -71,10 +82,12 @@
                 Resume simulation
             {/if}
         </button>
+
+        <div>
+            <slot />
+        </div>
     </aside>
 </main>
-
-<slot />
 
 <style>
     :root {
