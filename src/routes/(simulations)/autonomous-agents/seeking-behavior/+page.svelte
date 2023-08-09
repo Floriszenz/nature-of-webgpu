@@ -1,14 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-
-    import { simParams } from "$lib/stores";
-
-    onMount(() => {
-        $simParams = {
-            maxSpeed: 0.025,
-            maxForce: 0.001,
-        };
-    });
+    import { simParams } from "./stores";
 </script>
 
 <div>

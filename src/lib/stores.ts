@@ -1,3 +1,3 @@
 import { writable } from "svelte/store";
 
-export const simParams = writable<Record<string, any>>({});
+export const mousePosition = writable({ x: 0, y: 0 });

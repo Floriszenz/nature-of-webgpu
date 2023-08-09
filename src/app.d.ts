@@ -40,12 +40,7 @@ declare global {
             title: string;
             description: string;
             setup(device: GPUDevice, presentationFormat: GPUTextureFormat): SetupReturnType;
-            update(
-                device: GPUDevice,
-                ctx: GPUCanvasContext,
-                setupData: SetupReturnType,
-                simParamsData: Float32Array
-            ): void;
+            update(device: GPUDevice, ctx: GPUCanvasContext, setupData: SetupReturnType): void;
         }
         // interface Platform {}
     }

@@ -1,5 +1,8 @@
 import * as shapes from "$lib/framework/shapes";
 import { createBufferWithData } from "$lib/framework";
+import { mousePosition } from "$lib/stores";
+
+import { simParams } from "./stores";
 
 const COMPUTE_SHADER = /*wgsl*/ `
     struct Particle {
@@ -139,6 +142,8 @@ export const csr = true;
 export const ssr = false;
 
 export function load() {
+    const simParamsData = new Float32Array(4);
+
     return {
         title: "Seeking Behavior",
         description:
@@ -282,6 +287,20 @@ export function load() {
                 },
             });
 
+            mousePosition.subscribe(({ x, y }) => {
+                simParamsData[0] = x;
+                simParamsData[1] = y;
+
+                device.queue.writeBuffer(simParamsBuffer, 0, simParamsData);
+            });
+
+            simParams.subscribe(({ maxForce, maxSpeed }) => {
+                simParamsData[2] = maxSpeed;
+                simParamsData[3] = maxForce;
+
+                device.queue.writeBuffer(simParamsBuffer, 0, simParamsData);
+            });
+
             return {
                 computePipelines: [
                     {
@@ -328,18 +347,7 @@ export function load() {
             };
         },
 
-        update(
-            device: GPUDevice,
-            ctx: GPUCanvasContext,
-            setupData: SetupReturnType,
-            simParamsData: Float32Array
-        ) {
-            device.queue.writeBuffer(
-                setupData.renderPipelines[0].vertexBuffers[0].buffer,
-                0,
-                simParamsData
-            );
-
+        update(device: GPUDevice, ctx: GPUCanvasContext, setupData: SetupReturnType) {
             const commandEncoder = device.createCommandEncoder();
 
             {
