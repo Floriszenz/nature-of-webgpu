@@ -24,16 +24,20 @@ const COMPUTE_SHADER = /*wgsl*/ `
     fn main(@builtin(global_invocation_id) giid: vec3u) {
         let index = giid.x;
 
-        let position = particles[index].position;
-        let velocity = particles[index].velocity;
+        let position = &particles[index].position;
+        let velocity = &particles[index].velocity;
 
         // Seek
-        let desired_velocity = params.max_speed * normalize(params.target_pos - position);
-        let seek_force = desired_velocity - velocity;
-        let acceleration = limit(seek_force, params.max_force);
+        let desired_velocity = params.max_speed * normalize(params.target_pos - *position);
+        let seek_force = desired_velocity - *velocity;
+        var acceleration = vec2f(0.0);
 
-        particles[index].velocity = limit(velocity + acceleration, params.max_speed);
-        particles[index].position = position + velocity;
+        if (length(seek_force) != 0.0) {
+            acceleration = limit(seek_force, params.max_force);
+        }
+
+        *velocity = limit(*velocity + acceleration, params.max_speed);
+        *position = *position + *velocity;
     }
 `;
 
