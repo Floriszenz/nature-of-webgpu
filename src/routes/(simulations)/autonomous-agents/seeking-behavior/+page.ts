@@ -1,5 +1,4 @@
-import { createBoid } from "$lib/framework/entities/boid";
-import { createTarget } from "$lib/framework/entities/target";
+import { createBoid, createTarget } from "$lib/framework/entities";
 import { createBufferWithData, encodeComputePass, encodeRenderPass } from "$lib/framework/webgpu";
 import { mousePosition } from "$lib/stores";
 
@@ -45,13 +44,12 @@ const COMPUTE_SHADER = /*wgsl*/ `
     }
 `;
 
-const PARTICLE_COUNT = 1;
-
 export const csr = true;
 export const ssr = false;
 
-export function load(): App.PageData {
+export function load({ url }): App.PageData {
     const simParamsData = new Float32Array(4);
+    const particlesCount = parseInt(url.searchParams.get("particles") ?? "1");
 
     return {
         title: "Seeking Behavior",
@@ -83,9 +81,9 @@ export function load(): App.PageData {
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             });
 
-            const particleData = new Float32Array(4 * PARTICLE_COUNT);
+            const particleData = new Float32Array(4 * particlesCount);
 
-            for (let idx = 0; idx < PARTICLE_COUNT; idx++) {
+            for (let idx = 0; idx < particlesCount; idx++) {
                 // Position
                 particleData[4 * idx + 0] = 2 * (Math.random() - 0.5);
                 particleData[4 * idx + 1] = 2 * (Math.random() - 0.5);
@@ -132,7 +130,7 @@ export function load(): App.PageData {
                         pipeline: computePipeline,
                         bindGroups: [simBG],
                         workgroupCount: {
-                            x: Math.ceil(PARTICLE_COUNT / 16),
+                            x: Math.ceil(particlesCount / 16),
                         },
                     },
                 ],
@@ -156,7 +154,7 @@ export function load(): App.PageData {
                         vertexBuffers: [{ buffer: particleBuffer }, { buffer: boid.vertexBuffer }],
                         drawCount: {
                             vertexCount: boid.vertexCount,
-                            instanceCount: PARTICLE_COUNT,
+                            instanceCount: particlesCount,
                         },
                     },
                 ],
