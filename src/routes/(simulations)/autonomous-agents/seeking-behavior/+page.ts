@@ -1,5 +1,6 @@
-import * as shapes from "$lib/framework/shapes";
-import { createBufferWithData } from "$lib/framework";
+import { createBoid } from "$lib/framework/entities/boid";
+import { createTarget } from "$lib/framework/entities/target";
+import { createBufferWithData, encodeComputePass, encodeRenderPass } from "$lib/framework/webgpu";
 import { mousePosition } from "$lib/stores";
 
 import { simParams } from "./stores";
@@ -44,104 +45,12 @@ const COMPUTE_SHADER = /*wgsl*/ `
     }
 `;
 
-const TARGET_RENDER_SHADER = /*wgsl*/ `
-    struct VertexOutput {
-        @builtin(position) position: vec4f,
-    }
-
-    @vertex
-    fn vert_main(
-        @location(0) target_position: vec2f,
-        @location(1) vertex_position: vec2f
-    ) -> VertexOutput {
-        var output: VertexOutput;
-
-        output.position = vec4(vertex_position + target_position, 0.0, 1.0);
-
-        return output;
-    }
-
-    @fragment
-    fn frag_main() -> @location(0) vec4f {
-        return vec4f(0.7, 0.7, 0.7, 1.0);
-    }
-`;
-
-const BOID_RENDER_SHADER = /*wgsl*/ `
-    const HALF_PI = 0.5 * 3.14159;
-
-    struct VertexOutput {
-        @builtin(position) position: vec4f,
-    }
-
-    @vertex
-    fn vert_main(
-        @location(0) boid_position: vec2f,
-        @location(1) boid_velocity: vec2f,
-        @location(2) vertex_position: vec2f
-    ) -> VertexOutput {
-        let angle = atan2(boid_velocity.y, boid_velocity.x) - HALF_PI;
-        let position = vec2(
-            (vertex_position.x * cos(angle)) - (vertex_position.y * sin(angle)),
-            (vertex_position.x * sin(angle)) + (vertex_position.y * cos(angle))
-        );
-        var output: VertexOutput;
-
-        output.position = vec4(position + boid_position, 0.0, 1.0);
-
-        return output;
-    }
-
-    @fragment
-    fn frag_main() -> @location(0) vec4f {
-        return vec4f(0.4, 0.23, 0.72, 1.0);
-    }
-`;
-
-const TARGET_POSITION = [0.0, 0.0];
-const MAX_SPEED = 0.015;
-const MAX_FORCE = 0.0005;
-
 const PARTICLE_COUNT = 1;
-const TARGET_RADIUS = 0.05;
-const TARGET_RESOLUTION = 32;
-const BOID_WIDTH = 0.03;
-const BOID_HEIGHT = 0.06;
-
-type ComputePipelineDefinition = {
-    pipeline: GPUComputePipeline;
-    bindGroups: GPUBindGroup[];
-    workgroupCount: {
-        x: number;
-        y?: number;
-        z?: number;
-    };
-};
-
-type VertexBufferDefinition = {
-    buffer: GPUBuffer;
-    offset?: number;
-    size?: number;
-};
-
-type RenderPipelineDefinition = {
-    pipeline: GPURenderPipeline;
-    vertexBuffers: VertexBufferDefinition[];
-    drawCount: {
-        vertexCount: number;
-        instanceCount?: number;
-    };
-};
-
-type SetupReturnType = {
-    computePipelines: ComputePipelineDefinition[];
-    renderPipelines: RenderPipelineDefinition[];
-};
 
 export const csr = true;
 export const ssr = false;
 
-export function load() {
+export function load(): App.PageData {
     const simParamsData = new Float32Array(4);
 
     return {
@@ -149,7 +58,7 @@ export function load() {
         description:
             "This simulation shows how a steering force influences an autonomous agent to seek a target, which is bound to the mouse position.",
 
-        setup(device: GPUDevice, presentationFormat: GPUTextureFormat): SetupReturnType {
+        setup({ device, presentationFormat }) {
             const simBGLayout = device.createBindGroupLayout({
                 entries: [
                     { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: "uniform" } },
@@ -170,7 +79,7 @@ export function load() {
             const simParamsBuffer = createBufferWithData({
                 device,
                 label: "Simulation Parameters Buffer",
-                data: new Float32Array([...TARGET_POSITION, MAX_SPEED, MAX_FORCE]),
+                data: simParamsData,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             });
 
@@ -200,92 +109,8 @@ export function load() {
                 ],
             });
 
-            // Rendering - Target
-            const targetBufferData = shapes.circle(TARGET_RADIUS, TARGET_RESOLUTION);
-
-            const targetBuffer = createBufferWithData({
-                device,
-                label: "Target Vertex Buffer",
-                data: targetBufferData,
-                usage: GPUBufferUsage.VERTEX,
-            });
-
-            const targetShaderModule = device.createShaderModule({ code: TARGET_RENDER_SHADER });
-            const targetPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] });
-
-            const targetRenderPipeline = device.createRenderPipeline({
-                label: "Target Render Pipeline",
-                layout: targetPipelineLayout,
-                vertex: {
-                    module: device.createShaderModule({ code: TARGET_RENDER_SHADER }),
-                    entryPoint: "vert_main",
-                    buffers: [
-                        {
-                            arrayStride: 2 * 4,
-                            stepMode: "instance",
-                            attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }],
-                        },
-                        {
-                            arrayStride: 2 * 4,
-                            stepMode: "vertex",
-                            attributes: [{ shaderLocation: 1, offset: 0, format: "float32x2" }],
-                        },
-                    ],
-                },
-                fragment: {
-                    module: targetShaderModule,
-                    entryPoint: "frag_main",
-                    targets: [{ format: presentationFormat }],
-                },
-                primitive: {
-                    topology: "triangle-list",
-                },
-            });
-
-            // Rendering - Boid
-            const boidBufferData = shapes.triangle(BOID_WIDTH, BOID_HEIGHT);
-
-            const boidBuffer = createBufferWithData({
-                device,
-                label: "Boid Vertex Buffer",
-                data: boidBufferData,
-                usage: GPUBufferUsage.VERTEX,
-            });
-
-            const boidShaderModule = device.createShaderModule({ code: BOID_RENDER_SHADER });
-            const boidPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] });
-
-            const boidRenderPipeline = device.createRenderPipeline({
-                label: "Boid Render Pipeline",
-                layout: boidPipelineLayout,
-                vertex: {
-                    module: boidShaderModule,
-                    entryPoint: "vert_main",
-                    buffers: [
-                        {
-                            arrayStride: 4 * 4,
-                            stepMode: "instance",
-                            attributes: [
-                                { shaderLocation: 0, offset: 0, format: "float32x2" },
-                                { shaderLocation: 1, offset: 2 * 4, format: "float32x2" },
-                            ],
-                        },
-                        {
-                            arrayStride: 2 * 4,
-                            stepMode: "vertex",
-                            attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
-                        },
-                    ],
-                },
-                fragment: {
-                    module: boidShaderModule,
-                    entryPoint: "frag_main",
-                    targets: [{ format: presentationFormat }],
-                },
-                primitive: {
-                    topology: "triangle-list",
-                },
-            });
+            const target = createTarget({ device, presentationFormat });
+            const boid = createBoid({ device, presentationFormat });
 
             mousePosition.subscribe(({ x, y }) => {
                 simParamsData[0] = x;
@@ -314,32 +139,23 @@ export function load() {
                 renderPipelines: [
                     // Target
                     {
-                        pipeline: targetRenderPipeline,
+                        pipeline: target.renderingPipeline,
                         vertexBuffers: [
                             {
                                 buffer: simParamsBuffer,
                                 offset: 0,
                                 size: 2 * Float32Array.BYTES_PER_ELEMENT,
                             },
-                            {
-                                buffer: targetBuffer,
-                            },
+                            { buffer: target.vertexBuffer },
                         ],
-                        drawCount: { vertexCount: targetBufferData.length / 2 },
+                        drawCount: { vertexCount: target.vertexCount },
                     },
                     // Boid
                     {
-                        pipeline: boidRenderPipeline,
-                        vertexBuffers: [
-                            {
-                                buffer: particleBuffer,
-                            },
-                            {
-                                buffer: boidBuffer,
-                            },
-                        ],
+                        pipeline: boid.renderingPipeline,
+                        vertexBuffers: [{ buffer: particleBuffer }, { buffer: boid.vertexBuffer }],
                         drawCount: {
-                            vertexCount: boidBufferData.length / 2,
+                            vertexCount: boid.vertexCount,
                             instanceCount: PARTICLE_COUNT,
                         },
                     },
@@ -347,61 +163,11 @@ export function load() {
             };
         },
 
-        update(device: GPUDevice, ctx: GPUCanvasContext, setupData: SetupReturnType) {
+        update({ device, context }, { computePipelines, renderPipelines }) {
             const commandEncoder = device.createCommandEncoder();
 
-            {
-                const passEncoder = commandEncoder.beginComputePass();
-
-                for (const computePipeline of setupData.computePipelines) {
-                    passEncoder.setPipeline(computePipeline.pipeline);
-
-                    computePipeline.bindGroups.forEach((bindGroup, idx) => {
-                        passEncoder.setBindGroup(idx, bindGroup);
-                    });
-
-                    passEncoder.dispatchWorkgroups(
-                        computePipeline.workgroupCount.x,
-                        computePipeline.workgroupCount.y,
-                        computePipeline.workgroupCount.z
-                    );
-                }
-
-                passEncoder.end();
-            }
-
-            {
-                const passEncoder = commandEncoder.beginRenderPass({
-                    colorAttachments: [
-                        {
-                            view: ctx.getCurrentTexture().createView(),
-                            clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
-                            loadOp: "clear",
-                            storeOp: "store",
-                        },
-                    ],
-                });
-
-                for (const renderPipeline of setupData.renderPipelines) {
-                    passEncoder.setPipeline(renderPipeline.pipeline);
-
-                    renderPipeline.vertexBuffers.forEach((vertexBuffer, idx) => {
-                        passEncoder.setVertexBuffer(
-                            idx,
-                            vertexBuffer.buffer,
-                            vertexBuffer.offset,
-                            vertexBuffer.size
-                        );
-                    });
-
-                    passEncoder.draw(
-                        renderPipeline.drawCount.vertexCount,
-                        renderPipeline.drawCount.instanceCount
-                    );
-                }
-
-                passEncoder.end();
-            }
+            encodeComputePass(commandEncoder, computePipelines);
+            encodeRenderPass(context, commandEncoder, renderPipelines);
 
             device.queue.submit([commandEncoder.finish()]);
         },

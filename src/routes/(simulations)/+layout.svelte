@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
 
     import { page } from "$app/stores";
-    import { initializeContext } from "$lib/framework";
+    import { initializeWebGPU } from "$lib/framework/webgpu";
     import { mousePosition } from "$lib/stores";
 
     let height: number;
@@ -13,25 +13,23 @@
 
     $: canvasRect = canvas?.getBoundingClientRect();
 
-    let device: GPUDevice;
-    let ctx: GPUCanvasContext;
-    let format: GPUTextureFormat;
+    let ctx: App.WebGPUContext;
     let setupData: App.SetupReturnType;
 
     onMount(async () => {
         canvas.width = Math.min(width, height);
         canvas.height = Math.min(width, height);
 
-        [device, ctx, format] = await initializeContext(canvas);
+        ctx = await initializeWebGPU(canvas);
 
-        setupData = $page.data.setup(device, format);
+        setupData = $page.data.setup(ctx);
 
         runSimulation();
         isSimulationRunning = true;
     });
 
     function runSimulation() {
-        $page.data.update(device, ctx, setupData);
+        $page.data.update(ctx, setupData);
 
         animationHandle = requestAnimationFrame(() => runSimulation());
     }

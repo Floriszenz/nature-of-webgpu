@@ -34,13 +34,19 @@ declare global {
             renderPipelines: RenderPipelineDefinition[];
         };
 
+        type WebGPUContext = {
+            device: GPUDevice;
+            context: GPUCanvasContext;
+            presentationFormat: GPUTextureFormat;
+        };
+
         // interface Error {}
         // interface Locals {}
         interface PageData {
             title: string;
             description: string;
-            setup(device: GPUDevice, presentationFormat: GPUTextureFormat): SetupReturnType;
-            update(device: GPUDevice, ctx: GPUCanvasContext, setupData: SetupReturnType): void;
+            setup(ctx: WebGPUContext): SetupReturnType;
+            update(ctx: WebGPUContext, setupData: SetupReturnType): void;
         }
         // interface Platform {}
     }
