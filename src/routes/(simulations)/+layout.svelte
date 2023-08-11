@@ -41,7 +41,7 @@
         }
     }
 
-    function onPlayPauseClick() {
+    function toggleSimulation() {
         if (isSimulationRunning) {
             cancelAnimationFrame(animationHandle);
             isSimulationRunning = false;
@@ -50,7 +50,17 @@
             isSimulationRunning = true;
         }
     }
+
+    function handleKeyUp(event: KeyboardEvent) {
+        switch (event.key) {
+            case "k":
+                toggleSimulation();
+                break;
+        }
+    }
 </script>
+
+<svelte:window on:keyup={handleKeyUp} />
 
 <main>
     <aside>
@@ -63,7 +73,7 @@
         bind:clientWidth={width}
         on:mousemove={handleMouseMove} />
     <aside>
-        <button on:click={onPlayPauseClick}>
+        <button on:click={toggleSimulation}>
             {#if isSimulationRunning}
                 Pause simulation
             {:else}
