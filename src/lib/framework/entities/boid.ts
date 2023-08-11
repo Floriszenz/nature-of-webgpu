@@ -15,7 +15,12 @@ const BOID_RENDER_SHADER = /*wgsl*/ `
         @location(1) boid_velocity: vec2f,
         @location(2) vertex_position: vec2f
     ) -> VertexOutput {
-        let angle = atan2(boid_velocity.y, boid_velocity.x) - HALF_PI;
+        var angle = -HALF_PI;
+
+        if (length(boid_velocity) > 0.0) {
+            angle += atan2(boid_velocity.y, boid_velocity.x);
+        }
+
         let position = vec2(
             (vertex_position.x * cos(angle)) - (vertex_position.y * sin(angle)),
             (vertex_position.x * sin(angle)) + (vertex_position.y * cos(angle))

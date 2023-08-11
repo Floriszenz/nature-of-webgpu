@@ -20,6 +20,10 @@ const COMPUTE_SHADER = /*wgsl*/ `
     @group(0) @binding(1) var<storage, read_write> particles: array<Particle>;
 
     fn limit(v: vec2f, max_length: f32) -> vec2f {
+        if (length(v) == 0.0) {
+            return vec2f(0.0);
+        }
+
         return min(max_length, length(v)) * normalize(v);
     }
 
@@ -33,11 +37,7 @@ const COMPUTE_SHADER = /*wgsl*/ `
         // Seek
         let desired_velocity = params.max_speed * normalize(params.target_pos - *position);
         let seek_force = desired_velocity - *velocity;
-        var acceleration = vec2f(0.0);
-
-        if (length(seek_force) != 0.0) {
-            acceleration = limit(seek_force, params.max_force);
-        }
+        let acceleration = limit(seek_force, params.max_force);
 
         *velocity = limit(*velocity + acceleration, params.max_speed);
         *position = *position + *velocity;
