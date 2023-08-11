@@ -48,7 +48,7 @@ export function createTarget({
         device,
         label: "Target Vertex Buffer",
         data: vertexData,
-        usage: GPUBufferUsage.VERTEX,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     const shaderModule = device.createShaderModule({ code: TARGET_RENDER_SHADER });
